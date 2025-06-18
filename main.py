@@ -40,15 +40,15 @@ async def fetch_recent_messages(
 
 @bot.event
 async def on_ready():
-    await bot.sync_commands()
     print(f"Bot is ready! Logged in as {bot.user}.")
+    await bot.sync_commands()
     
-
+# hello
 @bot.slash_command(name="hello", description="Say hello to the bot!")
 async def hello(ctx: discord.ApplicationContext):
     await ctx.respond(f"Hello, {ctx.author.display_name}!")
 
-
+# blackjack
 @bot.slash_command(name="blackjack", description="Play a game of Blackjack with Cirno!")
 async def blackjack(ctx):
     await ctx.respond("Welcome to Cirno's Blackjack! Can you beat the strongest ice fairy?")
@@ -103,5 +103,20 @@ async def blackjack(ctx):
         await ctx.channel.send('You Lose!')
     else:
         await ctx.channel.send('Tie!')
+
+# ping
+@bot.slash_command(name="ping", description="Check the bot's ping!")
+async def ping(ctx):
+    a = bot.latency * 1000
+    if round(a) <= 50:
+        embed=discord.Embed(title="PING", description=f":ping_pong: Pingpingpingpingping! The ping is **{round(a)}** milliseconds!", color=0x44ff44)
+    elif round(a) <= 100:
+        embed=discord.Embed(title="PING", description=f":ping_pong: Pingpingpingpingping! The ping is **{round(a)}** milliseconds!", color=0xffd000)
+    elif round(a) <= 200:
+        embed=discord.Embed(title="PING", description=f":ping_pong: Pingpingpingpingping! The ping is **{round(a)}** milliseconds!", color=0xff6600)
+    else:
+        embed=discord.Embed(title="PING", description=f":ping_pong: Pingpingpingpingping! The ping is **{round(a)}** milliseconds!", color=0x990000)
+    await ctx.respond(embed=embed)
+
 
 bot.run(TOKEN)
