@@ -31,7 +31,7 @@ async def fetch_recent_messages(
         list[discord.Message]: The list of messages.
     """
     messages = []
-    async for message in channel.history(limit=limit):
+    async for message in channel.history(limit=max(limit, n)):
         if user is None or message.author == user:
             messages.append(message)
         if len(messages) >= n:
@@ -118,5 +118,37 @@ async def ping(ctx):
         embed=discord.Embed(title="PING", description=f":ping_pong: Pingpingpingpingping! The ping is **{round(a)}** milliseconds!", color=0x990000)
     await ctx.respond(embed=embed)
 
+@bot.slash_command(name="recent", description="Get the 10 most recent messages in the current channel.")
+async def recent(ctx: discord.ApplicationContext, user: discord.User | None):
+    messages = await fetch_recent_messages(ctx.channel, 10, user)
+    for message in reversed(messages):
+        print(f"{message.author.display_name}: {message.content}")
+    await ctx.respond("Recent messages have been printed to the console.")
+
+
+@bot.slash_command(name="stats", description="Check your message stats!")
+async def stats(ctx: discord.ApplicationContext, range: int = 100):
+    messages = await fetch_recent_messages(ctx.channel, range)
+    userMessages = 0
+    userChars = 0
+    totalChars = 0
+    for message in messages:
+        if message.author == ctx.author:
+            userMessages += 1
+            userChars += len(message.content)
+        totalChars += len(message.content)
+    percentChars = 100 * userChars / totalChars
+    response = f"Out of the {range} most recent messages, you sent {userMessages}!\nOf which, your messages occupied {percentChars:.3f}% of the total characters ({userChars} out of {totalChars})!\n"
+    if percentChars >= 35:
+        response += "Holy shit stop yapping already"
+    elif percentChars >= 25:
+        response += "You are the center of attention, good stuff"
+    elif percentChars >= 15:
+        response += "You contributions are respectfully appreciated"
+    elif percentChars >= 5:
+        response += "You should be more active... :("
+    else:
+        response += "L lurker lmao"
+    await ctx.respond(response)
 
 bot.run(TOKEN)
