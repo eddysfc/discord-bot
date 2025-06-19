@@ -51,58 +51,87 @@ async def hello(ctx: discord.ApplicationContext):
 # blackjack
 @bot.slash_command(name="blackjack", description="Play a game of Blackjack with Cirno!")
 async def blackjack(ctx):
-    await ctx.respond("Welcome to Cirno's Blackjack! Can you beat the strongest ice fairy?")
-    await ctx.channel.send("Dealing...")
-    def check(msg):
-        return msg.author == ctx.author and msg.channel == ctx.channel and msg.content in ["e", "E", "c", "C"]
     cards = ['Ace', 'Two', "Three", 'Four','Five','Six','Seven','Eight','Nine','Ten','Jack','Queen','King']
-    value=[11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]
-    x = random.randint(0,12)
-    y = random.randint(0,12)
-    h = ""
-    msg = " "
+    values = [11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]
 
-    hand = [cards[x], cards[y]]
-    handr = [x, y]
-    handv = [value[x], value[y]]
-    cpu = random.randint(17,24)
-    await ctx.channel.send("Your current cards: "+hand[0]+", "+hand[1])
+    def hand_value(hand):
+        total = sum(values[i] for i in hand)
+        aces = hand.count(0)
+        while total > 21 and aces:
+            total -= 10
+            aces -= 1
+        return total
 
-    while sum(handv)<22:
-        await ctx.channel.send('Press E to end, Press C to continue')
-        msg = await bot.wait_for("message", check=check)
-        if msg.content == "e":
-            break
-        if msg.content== "E":
-            break
-        z = random.randint(0,13)
-        hand.append(cards[z])
-        handr.append(z)
-        handv.append(value[z])
-        h="New Hand: "
-        for g in hand:
-            h+=g+", "
-        await ctx.channel.send(h)
-        if (sum(handv)>21):
-            value[0] = 1
+    player_hand = [random.randint(0, 12), random.randint(0, 12)]
+    cpu_score = int(random.gauss(19, 2.5))
+    cpu_score = max(16, min(cpu_score, 24))
 
-        handv = []
-        for x in handr:
-            handv.append(value[x])   
+    embed = discord.Embed(
+        title="Cirno's Blackjack",
+        description="Welcome to Cirno's Blackjack! Can you beat the strongest ice fairy?",
+        color=discord.Color.blue()
+    )
+    embed.add_field(
+        name="Your Hand",
+        value=", ".join(cards[i] for i in player_hand) + f"\nTotal: {hand_value(player_hand)}",
+        inline=False
+    )
+    embed.set_footer(text="🟩 = Hit | 🟥 = Stand")
 
-    await ctx.channel.send("Cirno had "+str(cpu)+". You had "+str(sum(handv))+".")
-    if sum(handv)>21 and cpu>21:
-        await ctx.channel.send('Tie!')
-    elif sum(handv)>21:
-        await ctx.channel.send('You Lose!')
-    elif cpu>21:
-        await ctx.channel.send('You Win!')
-    elif sum(handv)>cpu:
-        await ctx.channel.send("You Win!")
-    elif sum(handv)<cpu:
-        await ctx.channel.send('You Lose!')
+    message = await ctx.respond(embed=embed)
+    msg = await message.original_response()
+    await msg.add_reaction("🟩")  # Hit
+    await msg.add_reaction("🟥")  # Stand
+
+    finished = False
+    while not finished:
+        def check(reaction, user):
+            return (
+                user == ctx.author and
+                reaction.message and reaction.message.id == msg.id and
+                str(reaction.emoji) in ["🟩", "🟥"]
+            )
+        try:
+            reaction, user = await bot.wait_for("reaction_add", timeout=60.0, check=check)
+        except Exception:
+            embed.description = "Timed out! Game ended."
+            await msg.edit(embed=embed)
+            return
+
+        if str(reaction.emoji) == "🟥":
+            finished = True
+        elif str(reaction.emoji) == "🟩":
+            player_hand.append(random.randint(0, 12))
+            if hand_value(player_hand) > 21:
+                finished = True
+
+        # Update embed
+        embed.clear_fields()
+        embed.add_field(
+            name="Your Hand",
+            value=", ".join(cards[i] for i in player_hand) + f"\nTotal: {hand_value(player_hand)}",
+            inline=False
+        )
+        await msg.edit(embed=embed)
+
+    player_score = hand_value(player_hand)
+    result = ""
+    if player_score > 21 and cpu_score > 21:
+        result = "Tie!"
+    elif player_score > 21:
+        result = "You Lose!"
+    elif cpu_score > 21:
+        result = "You Win!"
+    elif player_score > cpu_score:
+        result = "You Win!"
+    elif player_score < cpu_score:
+        result = "You Lose!"
     else:
-        await ctx.channel.send('Tie!')
+        result = "Tie!"
+
+    embed.description = f"Cirno had {cpu_score}. You had {player_score}.\n**{result}**"
+    embed.set_footer(text="")
+    await msg.edit(embed=embed)
 
 # ping
 @bot.slash_command(name="ping", description="Check the bot's ping!")
