@@ -1,6 +1,6 @@
 import os
 import random
-
+import sqlite3
 from dotenv import load_dotenv
 import discord
 
@@ -9,6 +9,26 @@ TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.default()
 intents.message_content = True
+
+
+#idk
+message_count = 0
+message_limit = random.randint(5, 15)
+conn = sqlite3.connect('messages.db')
+cursor = conn.cursor()
+
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    author TEXT,
+    content TEXT
+)
+''')
+
+conn.commit()
+
+
+#idk
 
 bot = discord.Bot(intents=intents)
 
@@ -179,5 +199,32 @@ async def stats(ctx: discord.ApplicationContext, range: int = 100):
     else:
         response += "L lurker lmao"
     await ctx.respond(response)
+
+
+#idk tbh
+@bot.event
+async def on_message(message):
+    global message_count, message_limit
+
+    if message.author == bot.user:
+        return
+
+    cursor.execute('''
+    INSERT INTO messages (author, content)
+    VALUES (?, ?)
+    ''', (str(message.author), message.content))
+    conn.commit()
+
+    message_count += 1
+
+    if message_count >= message_limit:
+        cursor.execute('SELECT content FROM messages ORDER BY RANDOM() LIMIT 1')
+        row = cursor.fetchone()
+        if row:
+            await message.channel.send(row[0])
+        message_count = 0
+        message_limit = random.randint(5, 15)
+
+
 
 bot.run(TOKEN)
