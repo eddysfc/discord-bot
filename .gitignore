@@ -1,3 +1,4 @@
 .env
 .venv/
 messages.db
+pot.txt

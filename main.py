@@ -201,6 +201,58 @@ async def stats(ctx: discord.ApplicationContext, range: int = 100):
     await ctx.respond(response)
 
 
+
+@bot.slash_command(name="put", description="Add to the communal pot!")
+async def put(ctx: discord.ApplicationContext, amount: int):
+    if amount <= 0:
+        await ctx.respond("Please put a positive amount!")
+        return
+    try:
+        if not os.path.exists("pot.txt"):
+            with open("pot.txt", "w") as f:
+                f.write("0")
+        with open("pot.txt", "r") as f:
+            pot = int(f.read().strip())
+        pot += amount
+        with open("pot.txt", "w") as f:
+            f.write(str(pot))
+        await ctx.respond(f"You put {amount} in the pot! The pot now has {pot}.")
+    except Exception as e:
+        await ctx.respond("Something went wrong.")
+
+@bot.slash_command(name="take", description="Take from the communal pot!")
+async def take(ctx: discord.ApplicationContext, amount: int):
+    if amount <= 0:
+        await ctx.respond("Please take a positive amount!")
+        return
+    try:
+        if not os.path.exists("pot.txt"):
+            with open("pot.txt", "w") as f:
+                f.write("0")
+        with open("pot.txt", "r") as f:
+            pot = int(f.read().strip())
+        if amount > pot:
+            await ctx.respond(f"Not enough in the pot! The pot only has {pot}.")
+            return
+        pot -= amount
+        with open("pot.txt", "w") as f:
+            f.write(str(pot))
+        await ctx.respond(f"You took {amount} from the pot! The pot now has {pot}.")
+    except Exception as e:
+        await ctx.respond("Something went wrong.")
+
+@bot.slash_command(name="pot", description="Check the communal pot!")
+async def pot(ctx: discord.ApplicationContext):
+    try:
+        if not os.path.exists("pot.txt"):
+            with open("pot.txt", "w") as f:
+                f.write("0")
+        with open("pot.txt", "r") as f:
+            pot = int(f.read().strip())
+        await ctx.respond(f"The pot currently has {pot}.")
+    except Exception as e:
+        await ctx.respond("Something went wrong.")
+
 #idk tbh
 @bot.event
 async def on_message(message):
