@@ -3,6 +3,8 @@ import random
 import sqlite3
 from dotenv import load_dotenv
 import discord
+import string
+import re
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
@@ -11,9 +13,9 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 
-#idk
+#preprocessing
 message_count = 0
-message_limit = random.randint(5, 15)
+message_limit = random.randint(5, 10)
 conn = sqlite3.connect('messages.db')
 cursor = conn.cursor()
 
@@ -24,12 +26,21 @@ CREATE TABLE IF NOT EXISTS messages (
     content TEXT
 )
 ''')
-
 conn.commit()
 
+vocab_conn = sqlite3.connect('vocab.db')
+vocab_cursor = vocab_conn.cursor()
+vocab_cursor.execute('''
+CREATE TABLE IF NOT EXISTS vocab (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    word TEXT UNIQUE
+)
+''')
+vocab_conn.commit()
 
-#idk
 
+
+#bot
 bot = discord.Bot(intents=intents)
 
 async def fetch_recent_messages(
@@ -253,7 +264,24 @@ async def pot(ctx: discord.ApplicationContext):
     except Exception as e:
         await ctx.respond("Something went wrong.")
 
-#idk tbh
+
+#print vocab
+@bot.slash_command(name="vocab", description="Print all words in the vocab database.")
+async def vocab(ctx: discord.ApplicationContext):
+    vocab_cursor.execute('SELECT word FROM vocab ORDER BY word ASC')
+    words = [row[0] for row in vocab_cursor.fetchall()]
+    if not words:
+        await ctx.respond("The vocab database is empty.")
+        return
+    # Discord message limit is 2000 chars
+    vocab_text = ", ".join(words)
+    if len(vocab_text) > 1900:
+        short_vocab = ", ".join(words[:50]) + "..."
+        await ctx.respond(f"Vocab too long to display ({len(words)} words). Showing first 50:\n{short_vocab}")
+    else:
+        await ctx.respond(vocab_text)
+
+#test for ml
 @bot.event
 async def on_message(message):
     global message_count, message_limit
@@ -261,11 +289,25 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
+    #message storing
     cursor.execute('''
     INSERT INTO messages (author, content)
     VALUES (?, ?)
     ''', (str(message.author), message.content))
     conn.commit()
+
+    #vocab storing
+    words = set(
+        w.lower()
+        for w in re.findall(r"\w+|[^\w\s]", message.content)
+        if w and not w.isdigit()
+    )
+    for word in words:
+        try:
+            vocab_cursor.execute('INSERT OR IGNORE INTO vocab (word) VALUES (?)', (word,))
+        except Exception:
+            pass
+    vocab_conn.commit()
 
     message_count += 1
 
