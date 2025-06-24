@@ -300,7 +300,7 @@ async def on_message(message):
     words = set(
         w.lower()
         for w in re.findall(r"\w+|[^\w\s]", message.content)
-        if w and not w.isdigit()
+        if w
     )
     for word in words:
         try:
