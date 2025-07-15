@@ -319,6 +319,13 @@ async def on_message(message):
         message_count = 0
         message_limit = random.randint(5, 15)
 
-
+@bot.slash_command(name="randomword", description="Get a random word from the vocab database!")
+async def randomword(ctx: discord.ApplicationContext):
+    vocab_cursor.execute('SELECT word FROM vocab ORDER BY RANDOM() LIMIT 1')
+    row = vocab_cursor.fetchone()
+    if row:
+        await ctx.respond(f"{row[0]}")
+    else:
+        await ctx.respond("The vocab database is empty.")
 
 bot.run(TOKEN)
